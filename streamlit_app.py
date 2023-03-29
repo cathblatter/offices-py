@@ -24,13 +24,14 @@ def plot_capacity(my_data):
                   + geom_tile(color = "white", size=3)
                   + geom_text(aes(label = 'roomno'))
                   + coord_equal()
+                  + facet_wrap('floor', nrow=1)
                   + labs(x='Bernoullistrasse', 
                          y='Schönbeinstrasse')
                   + scale_fill_brewer(palette=4)
-                  + guides(fill = guide_legend(title = 'Number of places', ncol=1))
+                  + guides(fill = guide_legend(title = 'Number of places', nrow=1))
                   + theme(panel_grid=element_blank(), 
                           panel_background=element_blank(),
-                          legend_position=[.7,.8],
+                          legend_position='top',
                           axis_line=element_blank(),
                           axis_ticks=element_blank(),
                           axis_text=element_blank()))
@@ -42,6 +43,7 @@ def plot_occ_capacity_cat(my_data):
                              fill = 'occ_capacity_fill')) 
                   + geom_tile(color = "white", size=3)
                   + geom_text(aes(label = 'roomno'))
+                  + facet_wrap('floor', nrow=1)
                   + scale_fill_manual(values={'overbooked': '#9C0629',
                                                'booked': '#C9081F',
                                                'most places booked': '#EC7309',
@@ -51,10 +53,10 @@ def plot_occ_capacity_cat(my_data):
                   + coord_equal()
                   + labs(x='Bernoullistrasse', 
                          y='Schönbeinstrasse')
-                  + guides(fill = guide_legend(title = '', ncol=1))
+                  + guides(fill = guide_legend(title = '', nrow=1))
                   + theme(panel_grid=element_blank(), 
                           panel_background=element_blank(),
-                          legend_position=[.7,.8],
+                          legend_position='top',
                           axis_line=element_blank(),
                           axis_ticks=element_blank(),
                           axis_text=element_blank()))
@@ -65,6 +67,9 @@ df = load_data(st.secrets["public_gsheets_url"])
 
 # import the dataframe for the room coordinates
 room_coords = load_data(st.secrets["coord_gsheets_url"])
+
+# room_coords_og = room_coords[room_coords['floor'] == 'OG']
+# room_coords_ug = room_coords[room_coords['floor'] == 'UG']
 
 link_to_sheet = st.secrets["public_gsheets_url"]
 
@@ -79,7 +84,7 @@ Hello in the officeworld!
 # st.write(link_to_sheet)
 
 # Define the inputs to display
-tab1, tab2 = st.tabs({'Signup', 'Base capacity'})
+tab1, tab2 = st.tabs({'Overview by date', 'Base capacity'})
 
 
 with tab1:
@@ -99,7 +104,7 @@ with tab1:
       df_filter = df[df['date'] == chosen_date]
 
       # display the filtered dataframe
-      st.dataframe(df_filter)
+      st.dataframe(df_filter[['name', 'roomno', 'date']])
 
 
    with col2:
@@ -143,16 +148,14 @@ with tab1:
 
 with tab2:
       
-    col21, col22 = st.columns(2)
+    # col21, col22 = st.columns(2)
     
-    with col21:
-      
-      st.write("OG")
-      p = plot_capacity(room_coords)
-      st.pyplot(ggplot.draw(p))
+    # with col21:
+    #   st.write("OG")
+    p = plot_capacity(room_coords)
+    st.pyplot(ggplot.draw(p))
 
-    with col22:
-      
-      st.write("UG - following")
-      # p = plot_capacity(room_coords)
-      # st.pyplot(ggplot.draw(p))
+    # with col22:
+    #   st.write("UG")
+    #   p = plot_capacity(room_coords_ug)
+    #   st.pyplot(ggplot.draw(p))
