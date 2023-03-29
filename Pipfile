@@ -6,6 +6,10 @@ name = "pypi"
 [packages]
 streamlit = "*"
 matplotlib = "*"
+pandas = "*"
+numpy = "*"
+plotnine = "*"
+datetime = "*"
 
 [dev-packages]
 

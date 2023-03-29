@@ -26,7 +26,8 @@ def plot_capacity(my_data):
                   + coord_equal()
                   + labs(x='Bernoullistrasse', 
                          y='Schönbeinstrasse')
-                  + guides(fill = guide_legend(title = '', ncol=1))
+                  + scale_fill_brewer(palette=4)
+                  + guides(fill = guide_legend(title = 'Number of places', ncol=1))
                   + theme(panel_grid=element_blank(), 
                           panel_background=element_blank(),
                           legend_position=[.7,.8],
@@ -41,13 +42,12 @@ def plot_occ_capacity_cat(my_data):
                              fill = 'occ_capacity_fill')) 
                   + geom_tile(color = "white", size=3)
                   + geom_text(aes(label = 'roomno'))
-                  + scale_fill_discrete(drop = False)
-                #   + scale_fill_manual(values={'overbooked': '#9C0629',
-                #                                'booked': '#C9081F',
-                #                                'most places booked': '#EC7309',
-                #                                'some places booked': '#ECB309',
-                #                                'available': '#63B71D'},
-                #                                drop=False)
+                  + scale_fill_manual(values={'overbooked': '#9C0629',
+                                               'booked': '#C9081F',
+                                               'most places booked': '#EC7309',
+                                               'some places booked': '#ECB309',
+                                               'empty': '#63B71D'},
+                                               drop=False)
                   + coord_equal()
                   + labs(x='Bernoullistrasse', 
                          y='Schönbeinstrasse')
@@ -115,10 +115,11 @@ with tab1:
 
       # new overbooking colour
       # create a list of our conditions
+          
       conditions = [
          (match_data['occ_capacity'] > 1),
          (match_data['occ_capacity'] == 1),
-         (match_data['occ_capacity'] > .5) & (match_data['occ_capacity'] < 1),
+         (match_data['occ_capacity'] >= .5) & (match_data['occ_capacity'] < 1),
          (match_data['occ_capacity'] < 0.5) & (match_data['occ_capacity'] > 0),
          (match_data['occ_capacity'] == 0)
          ]
@@ -128,16 +129,30 @@ with tab1:
 
       # create a new column and use np.select to assign values to it using our lists as arguments
       match_data['occ_capacity_fill'] = np.select(conditions, values)
-      match_data['occ_capacity_fill'] = match_data['occ_capacity_fill'].astype("category")
-
-    #   st.dataframe(match_data)
+      match_data['occ_capacity_fill'] = pd.Categorical(match_data['occ_capacity_fill'], 
+                                                       categories=values)
 
 
       pp = plot_occ_capacity_cat(match_data)
       st.pyplot(ggplot.draw(pp))
 
+      # also look at the dataframe
+      # st.dataframe(match_data)
+
+
+
 with tab2:
       
-      p = plot_capacity(room_coords)
+    col21, col22 = st.columns(2)
+    
+    with col21:
       
+      st.write("OG")
+      p = plot_capacity(room_coords)
       st.pyplot(ggplot.draw(p))
+
+    with col22:
+      
+      st.write("UG - following")
+      # p = plot_capacity(room_coords)
+      # st.pyplot(ggplot.draw(p))
