@@ -9,7 +9,7 @@ from plotnine.data import mtcars
 
 
 # Read in data from the Google Sheet.
-# Uses st.cache_data to only rerun when the query changes or after 10 min.
+# Uses st.cache_data to only rerun when the query changes or after 1 min.
 @st.cache_data(ttl=60)
 
 # functions
@@ -24,10 +24,16 @@ def plot_capacity(my_data):
                   + geom_tile(color = "white", size=3)
                   + geom_text(aes(label = 'roomno'))
                   + coord_equal()
-                  + facet_wrap('floor', nrow=1)
+                #   + facet_wrap('floor', nrow=1)
                   + labs(x='Bernoullistrasse', 
                          y='Schönbeinstrasse')
-                  + scale_fill_brewer(palette=4)
+                  + scale_fill_manual(values={0: '#F1F3F5',
+                                              1: '#B9E4BC',
+                                              2: '#7BCCC4',
+                                              3: '#42A2CA',
+                                              4: '#0768AC',
+                                              5: '#0CA678'},
+                                               drop=False)
                   + guides(fill = guide_legend(title = 'Number of places', nrow=1))
                   + theme(panel_grid=element_blank(), 
                           panel_background=element_blank(),
@@ -43,7 +49,7 @@ def plot_occ_capacity_cat(my_data):
                              fill = 'occ_capacity_fill')) 
                   + geom_tile(color = "white", size=3)
                   + geom_text(aes(label = 'roomno'))
-                  + facet_wrap('floor', nrow=1)
+                #   + facet_wrap('floor', nrow=1)
                   + scale_fill_manual(values={'overbooked': '#9C0629',
                                                'booked': '#C9081F',
                                                'most places booked': '#EC7309',
@@ -66,10 +72,8 @@ def plot_occ_capacity_cat(my_data):
 df = load_data(st.secrets["public_gsheets_url"])
 
 # import the dataframe for the room coordinates
-room_coords = load_data(st.secrets["coord_gsheets_url"])
-
-# room_coords_og = room_coords[room_coords['floor'] == 'OG']
-# room_coords_ug = room_coords[room_coords['floor'] == 'UG']
+room_coords_og = load_data(st.secrets["coords_og_gsheets_url"])
+room_coords_ug = load_data(st.secrets["coords_ug_gsheets_url"])
 
 link_to_sheet = st.secrets["public_gsheets_url"]
 
@@ -84,7 +88,7 @@ Hello in the officeworld!
 # st.write(link_to_sheet)
 
 # Define the inputs to display
-tab1, tab2 = st.tabs({'Overview by date', 'Base capacity'})
+tab1, tab2 = st.tabs({'Date', 'Overview'})
 
 
 with tab1:
@@ -113,7 +117,7 @@ with tab1:
       n_per_room = pd.DataFrame(df_filter.groupby('roomno').size().reset_index(name='n'))
 
       # match this with the base room capacity
-      match_data = pd.merge(room_coords, n_per_room, how='left', on='roomno')
+      match_data = pd.merge(room_coords_og, n_per_room, how='left', on='roomno')
       match_data['n'].fillna(0, inplace=True)
       match_data['occ_capacity'] = match_data['n']/match_data['capacity']
       match_data['occ_capacity'].fillna(1, inplace=True)
@@ -148,14 +152,14 @@ with tab1:
 
 with tab2:
       
-    # col21, col22 = st.columns(2)
+    col21, col22 = st.columns(2)
     
-    # with col21:
-    #   st.write("OG")
-    p = plot_capacity(room_coords)
-    st.pyplot(ggplot.draw(p))
+    with col21:
+      st.write("OG")
+      p = plot_capacity(room_coords_og)
+      st.pyplot(ggplot.draw(p))
 
-    # with col22:
-    #   st.write("UG")
-    #   p = plot_capacity(room_coords_ug)
-    #   st.pyplot(ggplot.draw(p))
+    with col22:
+      st.write("UG")
+      p = plot_capacity(room_coords_ug)
+      st.pyplot(ggplot.draw(p))
