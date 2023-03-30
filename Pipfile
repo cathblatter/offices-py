@@ -11,6 +11,7 @@ numpy = "*"
 plotnine = "*"
 datetime = "*"
 watchdog = "*"
+supabase = "*"
 
 [dev-packages]
 
