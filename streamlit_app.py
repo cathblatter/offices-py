@@ -1,8 +1,9 @@
 # streamlit_app.py
 
 import pandas as pd
+import json
 import numpy as np
-import datetime
+import datetime as dt
 import streamlit as st
 from plotnine import *
 from plotnine.data import mtcars
@@ -106,8 +107,44 @@ with tab1:
    col1, col2 = st.columns(2)
    
    with col1: 
-      chosen_date = pd.to_datetime(st.date_input("Pick a date"))
-      st.write('The following people signed up on:', chosen_date)
+      
+      with st.form("my_form"):
+
+        st.write("Sign up for a room")
+        my_name = st.text_input("Name")
+        chosen_date = st.date_input("Pick a date")
+        t_start = st.time_input('From', dt.time(8, 00))
+        t_end = st.time_input('To', dt.time(17, 00))
+
+        # wrap data for storing
+        date_start = json.dumps(dt.datetime.combine(chosen_date, t_start).isoformat())
+        date_end = json.dumps(dt.datetime.combine(chosen_date, t_end).isoformat())
+
+# here I could add an immediate filter for the available rooms for a timeslot...
+
+        room_no = st.selectbox("Room number", 
+                               (106, 107, 108, 109, 113, 115, 117))
+
+        # Every form must have a submit button.
+        submitted = st.form_submit_button("Submit")
+      
+        if submitted:
+          data = supabase.table("bookings").insert({"name":my_name,
+                                                    "date_start":date_start,
+                                                    "date_end":date_end,
+                                                    "roomno": room_no,
+                                                    }).execute()
+          assert len(data.data) > 0
+
+
+
+          st.write("thanks for signing up!")
+          
+     
+      # chosen_date = pd.to_datetime(st.date_input("Pick a date"))
+      # st.write('The following people signed up on:', chosen_date)
+
+      # st.form('test')
 
       # # convert the date column
       # df['date'] = pd.to_datetime(df['date'], format='%Y-%m-%d')
@@ -118,13 +155,13 @@ with tab1:
       # # display the filtered dataframe
       # st.dataframe(df_filter[['name', 'roomno', 'date']])
 
+      # my_name = st.text_input('My name is:')
+      # data = supabase.table("mytable").insert({"name":my_name}).execute()
+      # assert len(data.data) > 0
 
    with col2:
-      t_start = st.time_input('From', datetime.time(8, 45))
-      t_end = st.time_input('To', datetime.time(8, 45))
-
-      st.write('Booking from', t_start, 'to', t_end)
-
+      
+      st.write("col2")
   #     # calculate how many people are per room on a given day
   #     n_per_room = pd.DataFrame(df_filter.groupby('roomno').size().reset_index(name='n'))
 
