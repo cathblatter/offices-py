@@ -1,13 +1,14 @@
 # streamlit_app.py
 
+import streamlit as st
+from supabase import create_client, Client
+
 import pandas as pd
 import json
 import numpy as np
 import datetime as dt
-import streamlit as st
 from plotnine import *
-from plotnine.data import mtcars
-from supabase import create_client, Client
+
 
 ### UI set page to wide
 st.set_page_config(layout="wide")
