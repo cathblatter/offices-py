@@ -7,8 +7,10 @@ import datetime as dt
 import streamlit as st
 from plotnine import *
 from plotnine.data import mtcars
-# from supabase import create_client, Client
-from supabase import *
+from supabase import create_client, Client
+
+### UI set page to wide
+st.set_page_config(layout="wide")
 
 # Initialize connection.
 # Uses st.cache_resource to only run once.
@@ -26,10 +28,7 @@ supabase = init_connection()
 def run_query(tbl_name):
     return supabase.table(tbl_name).select("*").execute()
 
-# get data and format as DF
-rows = run_query("bookings")
-df = pd.DataFrame(rows.data)
-
+#### non-changing information #####
 # import the dataframe for the room coordinates
 room_coords_og = pd.DataFrame(run_query("room_coords_og").data)
 room_coords_og['capacity'] = pd.Categorical(room_coords_og['capacity'], 
@@ -39,7 +38,62 @@ room_coords_ug = pd.DataFrame(run_query("room_coords_ug").data)
 room_coords_ug['capacity'] = pd.Categorical(room_coords_ug['capacity'], 
                                             categories=['0','1','2','3','4','5'])
 
-#### functions to use ####
+# Define the available rooms, places and time slots
+room_cap = pd.DataFrame({'roomno': ["113", "115", "117"],
+                         'cap': [3, 3, 1]})
+
+#### actual database #####
+
+
+#### UI inputs #####
+rooms = ["113", "115", "117"]
+time_slots = ["08:00", "09:00", "10:00", "11:00", "12:00", "13:00", 
+              "14:00", "15:00", "16:00", "17:00", "18:00"]
+
+##### functions for reformatting data #####
+
+# get data
+def get_data(query): 
+   rows = run_query(query)
+   df = pd.DataFrame(rows.data)
+   return(df)
+
+# long data format
+def create_long_df(df):
+    df = (df
+         .melt(id_vars=['id', 'name', 'roomno'],
+               value_vars=['date_start', 'date_end'], 
+               var_name='what', 
+               value_name='time')
+          .groupby('id'))
+    return(df)
+
+# create date/time range for each group per hour // aka pad
+def create_date_range(group):
+    start = group['time'].min()
+    end = group['time'].max()
+    return pd.date_range(start=start, end=end, freq='H')
+
+# create the hourly dataframe - inputs the result of create_long_df() and uses create_date_range()
+def create_hourly_df(df_long): 
+   hourly_df = pd.concat([pd.DataFrame({'id': id,
+                                     'time': create_date_range(group)}) for id, group in df_long])
+   hourly_df = pd.merge(hourly_df, 
+                     df[["id", "name", "roomno"]],
+                     on='id', how='left')   
+   return(hourly_df)
+
+# create hourly occupancy rate
+def create_hourly_occ(hourly_df):
+   hourly_occ = (hourly_df
+             .groupby(['roomno', 'time'])
+             .size()
+             .reset_index(name='n')
+             .merge(room_cap, on='roomno')
+             .assign(occ_rate=lambda x: x['n'] / x['cap']))
+   return(hourly_occ)
+
+##### functions for plotting #####
 def plot_capacity(my_data):
     qq = (ggplot(my_data, aes('x',
                              'y', 
@@ -90,7 +144,15 @@ def plot_occ_capacity_cat(my_data):
                           axis_text=element_blank()))
     return(qq)
 
-# Setup the user interface
+
+#### Get and prepare data ####
+df = get_data("bookings")
+df_long = create_long_df(df)
+hourly_df = create_hourly_df(df_long)
+hourly_occ = create_hourly_occ(hourly_df)
+
+
+#### Setup the user interface ####
 
 # get me a title
 st.title("""
@@ -98,8 +160,7 @@ Hello in the officeworld!
 """)
 
 # Define the inputs to display
-tab1, tab2 = st.tabs({'Date', 'Overview'})
-
+tab1, tab2 = st.tabs({"Bookings", "Overview"})
 
 with tab1:
    
@@ -110,20 +171,19 @@ with tab1:
       
       with st.form("my_form"):
 
-        st.write("Sign up for a room")
+        # st.write("Sign up for a room")
         my_name = st.text_input("Name")
         chosen_date = st.date_input("Pick a date")
-        t_start = st.time_input('From', dt.time(8, 00))
-        t_end = st.time_input('To', dt.time(17, 00))
+        t_start = st.time_input('From', dt.time(8, 00), step=3600)
+        t_end = st.time_input('To', dt.time(17, 00), step=3600)
 
         # wrap data for storing
         date_start = json.dumps(dt.datetime.combine(chosen_date, t_start).isoformat())
         date_end = json.dumps(dt.datetime.combine(chosen_date, t_end).isoformat())
 
-# here I could add an immediate filter for the available rooms for a timeslot...
-
-        room_no = st.selectbox("Room number", 
-                               (106, 107, 108, 109, 113, 115, 117))
+        # here I could add an immediate filter for the available rooms for a timeslot...
+        room_no = st.selectbox("Available rooms", 
+                               rooms)
 
         # Every form must have a submit button.
         submitted = st.form_submit_button("Submit")
@@ -136,60 +196,16 @@ with tab1:
                                                     }).execute()
           assert len(data.data) > 0
 
-
-
           st.write("thanks for signing up!")
           
-     
-      # chosen_date = pd.to_datetime(st.date_input("Pick a date"))
-      # st.write('The following people signed up on:', chosen_date)
-
-      # st.form('test')
-
-      # # convert the date column
-      # df['date'] = pd.to_datetime(df['date'], format='%Y-%m-%d')
-
-      # # filter the dataframe
-      # df_filter = df[df['date'] == chosen_date]
-
-      # # display the filtered dataframe
-      # st.dataframe(df_filter[['name', 'roomno', 'date']])
-
-      # my_name = st.text_input('My name is:')
-      # data = supabase.table("mytable").insert({"name":my_name}).execute()
-      # assert len(data.data) > 0
-
    with col2:
       
-      st.write("col2")
-  #     # calculate how many people are per room on a given day
-  #     n_per_room = pd.DataFrame(df_filter.groupby('roomno').size().reset_index(name='n'))
+      st.write("Mirror database")
 
-  #     # match this with the base room capacity
-  #     match_data = pd.merge(room_coords_og, n_per_room, how='left', on='roomno')
-  #     match_data['n'].fillna(0, inplace=True)
-  #     match_data['occ_capacity'] = match_data['n']/match_data['capacity']
-  #     match_data['occ_capacity'].fillna(1, inplace=True)
+      # get data and format as DF
+      df = get_data("bookings")
 
-  #     # new overbooking colour
-  #     # create a list of our conditions
-          
-  #     conditions = [
-  #        (match_data['occ_capacity'] > 1),
-  #        (match_data['occ_capacity'] == 1),
-  #        (match_data['occ_capacity'] >= .5) & (match_data['occ_capacity'] < 1),
-  #        (match_data['occ_capacity'] < 0.5) & (match_data['occ_capacity'] > 0),
-  #        (match_data['occ_capacity'] == 0)
-  #        ]
-
-  #     # create a list of the values we want to assign for each condition
-  #     values = ['overbooked', 'booked', 'most places booked', 'some places booked', 'empty']
-
-  #     # create a new column and use np.select to assign values to it using our lists as arguments
-  #     match_data['occ_capacity_fill'] = np.select(conditions, values)
-  #     match_data['occ_capacity_fill'] = pd.Categorical(match_data['occ_capacity_fill'], 
-  #                                                      categories=values)
-
+      st.dataframe(df)
 
   #     pp = plot_occ_capacity_cat(match_data)
   #     st.pyplot(ggplot.draw(pp))
@@ -197,18 +213,6 @@ with tab1:
   #     # also look at the dataframe
   #     # st.dataframe(match_data)
 
-
-
-with tab2:
-  
-  col21, col22 = st.columns(2)
-  
-  with col21:
-    st.write("OG")
-    p = plot_capacity(room_coords_og)
-    st.pyplot(ggplot.draw(p))
-
-  with col22:
-    st.write("UG")
-    p = plot_capacity(room_coords_ug)
-    st.pyplot(ggplot.draw(p))
+with tab2: 
+   
+   st.write("test")
