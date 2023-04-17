@@ -5,7 +5,8 @@ from supabase import create_client, Client
 import pandas as pd
 import json
 import datetime as dt
-# from plotnine import *
+import altair as alt
+from plotnine import *
 
 ### UI set page to wide
 st.set_page_config(layout="wide")
@@ -118,33 +119,40 @@ def create_hourly_occ(hourly_df):
 #     return(qq)
 
 # def plot_occ_capacity_cat(my_data):
-#     qq = (ggplot(my_data, aes('x', 
-#                              'y', 
-#                              fill = 'occ_capacity_fill')) 
-#                   + geom_tile(color = "white", size=3)
-#                   + geom_text(aes(label = 'roomno'))
-#                 #   + facet_wrap('floor', nrow=1)
-#                   + scale_fill_manual(values={'overbooked': '#9C0629',
-#                                                'booked': '#C9081F',
-#                                                'most places booked': '#EC7309',
-#                                                'some places booked': '#ECB309',
-#                                                'empty': '#63B71D'},
-#                                                drop=False)
-#                   + coord_equal()
-#                   + labs(x='Bernoullistrasse', 
-#                          y='Schönbeinstrasse')
-#                   + guides(fill = guide_legend(title = '', nrow=1))
-#                   + theme(panel_grid=element_blank(), 
-#                           panel_background=element_blank(),
-#                           legend_position='top',
-#                           axis_line=element_blank(),
-#                           axis_ticks=element_blank(),
-#                           axis_text=element_blank()))
-#     return(qq)
+    # qq = (ggplot(my_data, aes(x = 'time', 
+    #                           y  = 'roomno', 
+    #                           fill = 'factor(occ_rate)')) 
+    #               + geom_tile(color = "white", size=3)
+    #               + geom_text(aes(label = 'roomno'))
+    #             #   + facet_wrap('floor', nrow=1)
+    #               + scale_fill_manual(values={'overbooked': '#9C0629',
+    #                                            'booked': '#C9081F',
+    #                                            'most places booked': '#EC7309',
+    #                                            'some places booked': '#ECB309',
+    #                                            'empty': '#63B71D'},
+    #                                            drop=False)
+    #               + coord_equal()
+    #               + labs(x='Bernoullistrasse', 
+    #                      y='Schönbeinstrasse')
+    #               + guides(fill = guide_legend(title = '', nrow=1))
+    #               + theme(panel_grid=element_blank(), 
+    #                       panel_background=element_blank(),
+    #                       legend_position='top',
+    #                       axis_line=element_blank(),
+    #                       axis_ticks=element_blank(),
+    #                       axis_text=element_blank()))
+    # return(qq)
 
+def myplot(data): 
+   qq = (ggplot(data, aes(x = 'time',
+                          fill = 'occ_rate'))
+                + geom_bar()
+                +facet_wrap('roomno', ncol=1))
+   return(qq)
 
 #### Get and prepare data ####
 df = get_data("bookings")
+df = (df.merge(room_cap, how='left'))
 df_long = create_long_df(df)
 hourly_df = create_hourly_df(df_long)
 hourly_occ = create_hourly_occ(hourly_df)
@@ -163,7 +171,7 @@ tab1, tab2 = st.tabs({"Bookings", "Overview"})
 with tab1:
    
    # column display from here
-   col1, col2 = st.columns(2)
+   col1, col2 = st.columns([2, 6])
    
    with col1: 
       
@@ -198,19 +206,39 @@ with tab1:
           
    with col2:
       
-      st.write("Mirror database")
+      st.write("Hourly occ")
 
-      # get data and format as DF
-      df = get_data("bookings")
+    #   st.dataframe(hourly_occ)
+      minval = hourly_occ['time'].dt.date.min()
+      maxval = hourly_occ['time'].dt.date.max()
+      interval = pd.date_range(minval, maxval)
+      filter = st.selectbox("Day", interval)
+
+    #   filter_dat = hourly_occ[(hourly_occ['time'].dt.date == filter)]
 
       st.dataframe(df)
+      
+      test = alt.Chart(df).mark_bar().encode(
+         x='date_start',
+         x2='date_end',
+         y='roomno'
+      )
 
-  #     pp = plot_occ_capacity_cat(match_data)
-  #     st.pyplot(ggplot.draw(pp))
+      st.altair_chart(test)
+
+
+
+    #   pp = myplot(filter_dat)
+    #   st.pyplot(ggplot.draw(pp))
 
   #     # also look at the dataframe
   #     # st.dataframe(match_data)
 
 with tab2: 
    
-   st.write("test")
+    st.write("Mirror database")
+
+    # get data and format as DF
+    df = get_data("bookings")
+
+    st.dataframe(df)
