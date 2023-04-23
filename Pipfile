@@ -10,6 +10,7 @@ supabase = "*"
 matplotlib = "*"
 plotnine = "*"
 altair = "*"
+vega-datasets = "*"
 
 [dev-packages]
 

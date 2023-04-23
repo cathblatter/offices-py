@@ -8,6 +8,8 @@ import datetime as dt
 import altair as alt
 from plotnine import *
 
+alt.themes.enable("streamlit")
+
 ### UI set page to wide
 st.set_page_config(layout="wide")
 
@@ -38,14 +40,16 @@ room_coords_ug['capacity'] = pd.Categorical(room_coords_ug['capacity'],
                                             categories=['0','1','2','3','4','5'])
 
 # Define the available rooms, places and time slots
-room_cap = pd.DataFrame({'roomno': ["113", "115", "117"],
-                         'cap': [3, 3, 1]})
+room_cap = pd.DataFrame({'roomno': ["U03", "115", "117"],
+                         'cap': [5, 3, 1]})
 
 #### actual database #####
 
 
 #### UI inputs #####
-rooms = ["113", "115", "117"]
+rooms_places = ["U03_1", "U03_2", "U03_3", "U03_4", "U03_5", 
+                "115_1", "115_2", "115_3", 
+                "117_1"]
 time_slots = ["08:00", "09:00", "10:00", "11:00", "12:00", "13:00", 
               "14:00", "15:00", "16:00", "17:00", "18:00"]
 
@@ -55,6 +59,9 @@ time_slots = ["08:00", "09:00", "10:00", "11:00", "12:00", "13:00",
 def get_data(query): 
    rows = run_query(query)
    df = pd.DataFrame(rows.data)
+   df['date_start'] = pd.to_datetime(df["date_start"])
+   df['date_end'] = pd.to_datetime(df["date_end"])
+   df = df.drop(['created_at'], axis=1)
    return(df)
 
 # long data format
@@ -143,12 +150,12 @@ def create_hourly_occ(hourly_df):
     #                       axis_text=element_blank()))
     # return(qq)
 
-def myplot(data): 
-   qq = (ggplot(data, aes(x = 'time',
-                          fill = 'occ_rate'))
-                + geom_bar()
-                +facet_wrap('roomno', ncol=1))
-   return(qq)
+# def myplot(data): 
+#    qq = (ggplot(data, aes(x = 'time',
+#                           fill = 'occ_rate'))
+#                 + geom_bar()
+#                 +facet_wrap('roomno', ncol=1))
+#    return(qq)
 
 #### Get and prepare data ####
 df = get_data("bookings")
@@ -162,8 +169,51 @@ hourly_occ = create_hourly_occ(hourly_df)
 
 # get me a title
 st.title("""
-Hello in the officeworld!
+Welcome to office-bingo!
 """)
+
+time_graph = (
+      alt.Chart(df)
+      .mark_bar()
+      .encode(
+         x=alt.X('date_start:T', 
+                 title="Date and time of booking",
+                 axis=alt.Axis(grid=True)),
+         x2='date_end:T',
+         y=alt.Y('roomno_place', title='Offices'),
+         color='name'
+         ).properties(height=400).interactive()
+      )
+
+
+# todays reference date value for the x-axis
+today = pd.to_datetime(dt.date.today())
+past = today - pd.DateOffset(days=7)
+future = today + pd.DateOffset(months=4)
+shading_start = pd.date_range(past, future)
+shading_end = shading_start + pd.DateOffset(hours=23)
+
+shading = {'start': shading_start, 'end': shading_end}
+shading = pd.DataFrame(shading)
+shading['color'] = ['lightgrey', 'white'] * int((len(shading)/2))
+
+# st.write(shading)
+
+
+# add day shading
+# day_shading = (
+#     alt.Chart(shading)
+#     .mark_rect(opacity=0.1)
+#     .encode(
+#       x=alt.X('start:T'),
+#       x2='end:T',
+#       color='color')
+#    )
+
+st.altair_chart((time_graph).interactive(), 
+                theme='streamlit', 
+                use_container_width=True)
+
 
 # Define the inputs to display
 tab1, tab2 = st.tabs({"Bookings", "Overview"})
@@ -187,18 +237,25 @@ with tab1:
         date_start = json.dumps(dt.datetime.combine(chosen_date, t_start).isoformat())
         date_end = json.dumps(dt.datetime.combine(chosen_date, t_end).isoformat())
 
-        # here I could add an immediate filter for the available rooms for a timeslot...
-        room_no = st.selectbox("Available rooms", 
-                               rooms)
+        #   here I need to add a filter for...
 
+        # here I could add an immediate filter for the available rooms for a timeslot...
+        roomno_place = st.selectbox("Available places", 
+                               rooms_places)
+        
         # Every form must have a submit button.
         submitted = st.form_submit_button("Submit")
       
         if submitted:
+          roomno = roomno_place.split("_")[0]
+          place = roomno_place.split("_")[1]
+
           data = supabase.table("bookings").insert({"name":my_name,
                                                     "date_start":date_start,
                                                     "date_end":date_end,
-                                                    "roomno": room_no,
+                                                    "roomno_place": roomno_place,
+                                                    "roomno": roomno,
+                                                    "place": place,
                                                     }).execute()
           assert len(data.data) > 0
 
@@ -209,24 +266,14 @@ with tab1:
       st.write("Hourly occ")
 
     #   st.dataframe(hourly_occ)
-      minval = hourly_occ['time'].dt.date.min()
-      maxval = hourly_occ['time'].dt.date.max()
-      interval = pd.date_range(minval, maxval)
-      filter = st.selectbox("Day", interval)
+      # minval = hourly_occ['time'].dt.date.min()
+      # maxval = hourly_occ['time'].dt.date.max()
+      # interval = pd.date_range(minval, maxval)
+      # filter = st.selectbox("Day", interval)
 
     #   filter_dat = hourly_occ[(hourly_occ['time'].dt.date == filter)]
 
       st.dataframe(df)
-      
-      test = alt.Chart(df).mark_bar().encode(
-         x='date_start',
-         x2='date_end',
-         y='roomno'
-      )
-
-      st.altair_chart(test)
-
-
 
     #   pp = myplot(filter_dat)
     #   st.pyplot(ggplot.draw(pp))
