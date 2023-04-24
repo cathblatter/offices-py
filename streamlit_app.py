@@ -61,6 +61,7 @@ def get_data(query):
    df = pd.DataFrame(rows.data)
    df['date_start'] = pd.to_datetime(df["date_start"])
    df['date_end'] = pd.to_datetime(df["date_end"])
+   df['roomno_place'] = pd.Categorical(df['roomno_place'], categories=rooms_places)
    df = df.drop(['created_at'], axis=1)
    return(df)
 
@@ -172,49 +173,6 @@ st.title("""
 Welcome to office-bingo!
 """)
 
-time_graph = (
-      alt.Chart(df)
-      .mark_bar()
-      .encode(
-         x=alt.X('date_start:T', 
-                 title="Date and time of booking",
-                 axis=alt.Axis(grid=True)),
-         x2='date_end:T',
-         y=alt.Y('roomno_place', title='Offices'),
-         color='name'
-         ).properties(height=400).interactive()
-      )
-
-
-# todays reference date value for the x-axis
-today = pd.to_datetime(dt.date.today())
-past = today - pd.DateOffset(days=7)
-future = today + pd.DateOffset(months=4)
-shading_start = pd.date_range(past, future)
-shading_end = shading_start + pd.DateOffset(hours=23)
-
-shading = {'start': shading_start, 'end': shading_end}
-shading = pd.DataFrame(shading)
-shading['color'] = ['lightgrey', 'white'] * int((len(shading)/2))
-
-# st.write(shading)
-
-
-# add day shading
-# day_shading = (
-#     alt.Chart(shading)
-#     .mark_rect(opacity=0.1)
-#     .encode(
-#       x=alt.X('start:T'),
-#       x2='end:T',
-#       color='color')
-#    )
-
-st.altair_chart((time_graph).interactive(), 
-                theme='streamlit', 
-                use_container_width=True)
-
-
 # Define the inputs to display
 tab1, tab2 = st.tabs({"Bookings", "Overview"})
 
@@ -225,30 +183,36 @@ with tab1:
    
    with col1: 
       
-      with st.form("my_form"):
-
-        # st.write("Sign up for a room")
+      with st.form("check_rooms"):
         my_name = st.text_input("Name")
         chosen_date = st.date_input("Pick a date")
         t_start = st.time_input('From', dt.time(8, 00), step=3600)
         t_end = st.time_input('To', dt.time(17, 00), step=3600)
 
-        # wrap data for storing
-        date_start = json.dumps(dt.datetime.combine(chosen_date, t_start).isoformat())
-        date_end = json.dumps(dt.datetime.combine(chosen_date, t_end).isoformat())
+        # check_rooms = st.form_submit_button("Check rooms")
 
-        #   here I need to add a filter for...
+        # if check_rooms: 
+        #   # filtering the available spots to display for the room
+        #   start = dt.datetime.combine(chosen_date, t_start).isoformat()
+        #   end = dt.datetime.combine(chosen_date, t_end).isoformat()
+        #   dat = df[(df['date_start'] <= start) & (df['date_end'] >= end)]
+        #   places = dat['roomno_place'].drop_duplicates().tolist()
+        #   av_places = set(rooms_places)
+        #   av_places = av_places.difference(places)
 
-        # here I could add an immediate filter for the available rooms for a timeslot...
-        roomno_place = st.selectbox("Available places", 
-                               rooms_places)
-        
+        #   roomno_place = st.selectbox("Available places", av_places)
+        roomno_place = st.selectbox("Available places", rooms_places)
+
         # Every form must have a submit button.
         submitted = st.form_submit_button("Submit")
       
         if submitted:
+          
+          # modify and wrap data for storing in database
           roomno = roomno_place.split("_")[0]
           place = roomno_place.split("_")[1]
+          date_start = json.dumps(dt.datetime.combine(chosen_date, t_start).isoformat())
+          date_end = json.dumps(dt.datetime.combine(chosen_date, t_end).isoformat())
 
           data = supabase.table("bookings").insert({"name":my_name,
                                                     "date_start":date_start,
@@ -261,31 +225,51 @@ with tab1:
 
           st.write("thanks for signing up!")
           
+          # update the available database
+          df = get_data('bookings')
+
    with col2:
-      
-      st.write("Hourly occ")
 
-    #   st.dataframe(hourly_occ)
-      # minval = hourly_occ['time'].dt.date.min()
-      # maxval = hourly_occ['time'].dt.date.max()
-      # interval = pd.date_range(minval, maxval)
-      # filter = st.selectbox("Day", interval)
+      time_graph = (
+            alt.Chart(df)
+            .mark_bar()
+            .encode(
+              x=alt.X('date_start:T', 
+                      title="Date and time of booking",
+                      axis=alt.Axis(grid=True, gridWidth=2)),
+              x2='date_end:T',
+              y=alt.Y('roomno_place:O', title='Offices'),
+              color=alt.Color('name', legend=None)
+              ).properties(height=300).interactive()
+            )
 
-    #   filter_dat = hourly_occ[(hourly_occ['time'].dt.date == filter)]
+      # todays reference date value for the x-axis
+      today = pd.to_datetime(dt.date.today())
+      past = today - pd.DateOffset(months=2)
+      future = today + pd.DateOffset(months=4)
+      shading_start = pd.date_range(past, future)
+      shading_end = shading_start + pd.DateOffset(hours=23)
 
-      st.dataframe(df)
+      shading = {'start': shading_start, 'end': shading_end}
+      shading = pd.DataFrame(shading)
+      shading['color'] = ['lightgrey', 'white'] * int((len(shading)/2))
 
-    #   pp = myplot(filter_dat)
-    #   st.pyplot(ggplot.draw(pp))
+      # add day shading
+      day_shading = (
+          alt.Chart(shading)
+          .mark_rect(opacity=0.1)
+          .encode(
+            x=alt.X('start:T'),
+            x2='end:T',
+            color='color')
+        )
 
-  #     # also look at the dataframe
-  #     # st.dataframe(match_data)
+      st.altair_chart((time_graph).interactive(), 
+                      theme='streamlit', 
+                      use_container_width=True)
 
 with tab2: 
    
     st.write("Mirror database")
-
-    # get data and format as DF
-    df = get_data("bookings")
 
     st.dataframe(df)
