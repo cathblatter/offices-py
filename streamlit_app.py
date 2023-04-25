@@ -258,13 +258,9 @@ with tab2:
    with col2: 
 
       with st.form("book_rooms"):
-
+    
         my_name = st.text_input("Name")
         roomno_place = st.text_input("Enter your place here:")
-       
-
-        # roomno_place = st.selectbox("Available places", av_places)
-        # roomno_place = st.selectbox("Available places", rooms_places)
 
         # Every form must have a submit button.
         submitted = st.form_submit_button("Book place")
@@ -291,59 +287,6 @@ with tab2:
                 
             # update the available database
             df = get_data('bookings')
-
-
-# text outside of the cols - does not get updated
-
-time_graph = (
-            alt.Chart(df)
-            .mark_bar()
-            .encode(
-              x=alt.X('date_start:T', 
-                      title="Date and time of booking",
-                      axis=alt.Axis(grid=True, gridWidth=2)),
-              x2='date_end:T',
-              y=alt.Y('roomno_place:O', title='Offices', scale=alt.Scale(domain=rooms_places)),
-              color=alt.Color('name', legend=None),
-              tooltip=[alt.Tooltip('name', title='Name'), 
-                       alt.Tooltip('date_start', title='Date'), 
-                       alt.Tooltip('hours(date_start)', title='from'), 
-                       alt.Tooltip('hours(date_end)', title='to')]
-              ).properties(height=400).interactive()
-            )
-
-    #   # todays reference date value for the x-axis
-    #   today = pd.to_datetime(dt.date.today())
-    #   past = today - pd.DateOffset(months=2)
-    #   future = today + pd.DateOffset(months=4)
-    #   shading_start = pd.date_range(past, future)
-    #   shading_end = shading_start + pd.DateOffset(hours=23)
-
-    #   shading = {'start': shading_start, 'end': shading_end}
-    #   shading = pd.DataFrame(shading)
-    #   shading['color'] = ['lightgrey', 'white'] * int((len(shading)/2))
-
-    #   # add day shading
-    #   day_shading = (
-    #       alt.Chart(shading)
-    #       .mark_rect(opacity=0.1)
-    #       .encode(
-    #         x=alt.X('start:T'),
-    #         x2='end:T',
-    #         color='color')
-    #     )
-
-st.markdown("**Graphical overview of bookings**")
-
-st.altair_chart((time_graph).interactive(), 
-                      theme='streamlit', 
-                      use_container_width=True)
-
-
-
-with tab2: 
-   
-    st.header(" 🚧 🚜 🛠️ 🚧")
 
 with tab3: 
    
