@@ -174,12 +174,15 @@ def create_hourly_occ(hourly_df):
 #    return(qq)
 
 #### Get and prepare data ####
+
+# get from database and add room_capacity information
 df = get_data("bookings")
 df = (df.merge(room_cap, how='left'))
+
+# create a long dataframe to map the hourly occupancy
 df_long = create_long_df(df)
 hourly_df = create_hourly_df(df_long)
 hourly_occ = create_hourly_occ(hourly_df)
-
 
 #### Setup the user interface ####
 
@@ -189,63 +192,80 @@ Welcome to office-bingo!
 """)
 
 # Define the inputs to display
-tab1, tab2, tab3 = st.tabs([":calendar: Bookings", "🗺️ Where am I?", "❌ Cancel booking"])
+tab1, tab2, tab3 = st.tabs([":calendar: Book a room", "🗺️ Where am I?", "❌ Cancel booking"])
 
 with tab1:
    
    # column display from here
-   col1, col2 = st.columns([2, 6])
+   col1, col2 = st.columns([1, 1])
    
    with col1: 
       
+      def update_first():
+        st.session_state.second = st.session_state.first
+
       with st.form("check_rooms"):
-        my_name = st.text_input("Name")
         chosen_date = st.date_input("Pick a date")
         t_start = st.time_input('From', dt.time(8, 00), step=3600)
         t_end = st.time_input('To', dt.time(17, 00), step=3600)
 
-        # check_rooms = st.form_submit_button("Check rooms")
+        check_rooms = st.form_submit_button("Check rooms")
 
-        # if check_rooms: 
-        #   # filtering the available spots to display for the room
-        #   start = dt.datetime.combine(chosen_date, t_start).isoformat()
-        #   end = dt.datetime.combine(chosen_date, t_end).isoformat()
-        #   dat = df[(df['date_start'] <= start) & (df['date_end'] >= end)]
-        #   places = dat['roomno_place'].drop_duplicates().tolist()
-        #   av_places = set(rooms_places)
-        #   av_places = av_places.difference(places)
+        if check_rooms: 
+          
+          # filtering the available spots to display for the room
+          start = dt.datetime.combine(chosen_date, t_start).isoformat()
+          end = dt.datetime.combine(chosen_date, t_end).isoformat()
+          dat = df[(df['date_start_utc'] <= start) & (df['date_end_utc'] >= end)]
+          places = dat['roomno_place'].drop_duplicates().tolist()
+          av_places = set(rooms_places)
+          av_places = av_places.difference(places)
+          av_places = list(av_places)
+          av_places.sort()
 
-        #   roomno_place = st.selectbox("Available places", av_places)
-        roomno_place = st.selectbox("Available places", rooms_places)
+          st.write("These places are available:", av_places)
+
+   with col2: 
+
+      with st.form("book_rooms"):
+
+        my_name = st.text_input("Name")
+        roomno_place = st.text_input("Enter your place here:")
+       
+
+        # roomno_place = st.selectbox("Available places", av_places)
+        # roomno_place = st.selectbox("Available places", rooms_places)
 
         # Every form must have a submit button.
         submitted = st.form_submit_button("Submit")
-      
+             
         if submitted:
-          
-          # modify and wrap data for storing in database
-          roomno = roomno_place.split("_")[0]
-          place = roomno_place.split("_")[1]
-          date_start = json.dumps(dt.datetime.combine(chosen_date, t_start).isoformat())
-          date_end = json.dumps(dt.datetime.combine(chosen_date, t_end).isoformat())
+                
+            # modify and wrap data for storing in database
+            roomno_place = roomno_place.replace('"', '')
+            roomno = roomno_place.split("_")[0]
+            place = roomno_place.split("_")[1]
+            date_start = json.dumps(dt.datetime.combine(chosen_date, t_start).isoformat())
+            date_end = json.dumps(dt.datetime.combine(chosen_date, t_end).isoformat())
 
-          data = supabase.table("bookings").insert({"name":my_name,
-                                                    "date_start":date_start,
-                                                    "date_end":date_end,
-                                                    "roomno_place": roomno_place,
-                                                    "roomno": roomno,
-                                                    "place": place,
-                                                    }).execute()
-          assert len(data.data) > 0
+            data = supabase.table("bookings").insert({"name":my_name,
+                                                            "date_start":date_start,
+                                                            "date_end":date_end,
+                                                            "roomno_place": roomno_place,
+                                                            "roomno": roomno,
+                                                            "place": place,
+                                                            }).execute()
+            assert len(data.data) > 0
 
-          st.write("thanks for signing up!")
-          
-          # update the available database
-          df = get_data('bookings')
+            st.write("thanks for signing up!")
+                
+            # update the available database
+            df = get_data('bookings')
 
-   with col2:
 
-      time_graph = (
+# text outside of the cols - does not get updated
+
+time_graph = (
             alt.Chart(df)
             .mark_bar()
             .encode(
@@ -283,9 +303,13 @@ with tab1:
     #         color='color')
     #     )
 
-      st.altair_chart((time_graph).interactive(), 
+st.markdown("**Graphical overview of bookings**")
+
+st.altair_chart((time_graph).interactive(), 
                       theme='streamlit', 
                       use_container_width=True)
+
+
 
 with tab2: 
    
@@ -293,7 +317,7 @@ with tab2:
 
 with tab3: 
    
-    st.header(""" :warning: Cancel your booking! """)
+    st.header(""" :warning: Cancel your booking """)
 
     st.markdown("""
     If you want to cancel your booking: 
