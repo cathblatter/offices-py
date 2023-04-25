@@ -148,7 +148,7 @@ with tab1:
                         axis=alt.Axis(grid=True, gridWidth=2)),
                 x2='date_end:T',
                 y=alt.Y('roomno_place:O', 
-                        title='Offices', 
+                        title='Office and places', 
                         scale=alt.Scale(domain=rooms_places)),
                 # color=alt.Color('name', legend=None),
                 tooltip=[alt.Tooltip('name', title='Name'), 
@@ -212,7 +212,7 @@ with tab1:
     #         )
     # )
 
-    st.header("Graphical overview of bookings")
+    st.header("Overview of all bookings by room/place")
 
     st.markdown("""
     - Default display is the current week - you can drag the chart horizontally
@@ -253,14 +253,14 @@ with tab2:
           av_places = list(av_places)
           av_places.sort()
 
-          st.write("These places are available:", av_places)
+          st.write("These places are available - select one with 'copy to clipboard':", av_places)
 
    with col2: 
 
       with st.form("book_rooms"):
     
         my_name = st.text_input("Name")
-        roomno_place = st.text_input("Enter your place here:")
+        roomno_place = st.text_input("Paste/enter your chosen place here:")
 
         # Every form must have a submit button.
         submitted = st.form_submit_button("Book place")
