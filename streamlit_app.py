@@ -11,7 +11,20 @@ from plotnine import *
 alt.themes.enable("streamlit")
 
 ### UI set page to wide
-st.set_page_config(layout="wide")
+st.set_page_config(
+    page_title="office-bingo",
+    page_icon="🎲",
+    layout="wide",
+    menu_items={
+        'Report a bug': "https://github.com/cathblatter/offices-py/issues",
+        'About': """
+        This is an *extremely* cool app! It's also a lot of work so please be patient if things 
+        don't work out as planned. There's no guarantee given by the app for any fixed places - thanks
+        for your understanding!
+        """
+    }
+)
+
 
 # Initialize connection.
 # Uses st.cache_resource to only run once.
