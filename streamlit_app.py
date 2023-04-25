@@ -138,13 +138,100 @@ tab1, tab2, tab3 = st.tabs([":bar_chart: Overview", ":calendar: Book a room",  "
 
 with tab1:
    
+    # time graph
+    time_graph = (
+                alt.Chart(df)
+                .mark_bar()
+                .encode(
+                x=alt.X('date_start:T', 
+                        title="Date and time of booking",
+                        axis=alt.Axis(grid=True, gridWidth=2)),
+                x2='date_end:T',
+                y=alt.Y('roomno_place:O', 
+                        title='Offices', 
+                        scale=alt.Scale(domain=rooms_places)),
+                # color=alt.Color('name', legend=None),
+                tooltip=[alt.Tooltip('name', title='Name'), 
+                        alt.Tooltip('date_start', title='Date'), 
+                        alt.Tooltip('hours(date_start)', title='from'), 
+                        alt.Tooltip('hours(date_end)', title='to')]
+                ).properties(height=400).interactive()
+                )
+
+    # today and other reference date value for the axis, 
+    # the axis domains, the shading etc
+    today = pd.to_datetime(dt.date.today())
+
+    # for domain_pd to see only 1 week from today
+    week = today + pd.DateOffset(weeks=1)
+    domain_pd = pd.to_datetime([today, week]).astype(int) / 10 ** 6
+
+    # shading one year front and back for today
+    past = today - pd.DateOffset(years=1)
+    future = today + pd.DateOffset(years=1)
+
+    # create a dataframe with the information
+    shading_start = pd.date_range(past, future)
+
+    # the two hours offset are for matching the weird TZ difference
+    shading_start = shading_start - pd.DateOffset(hours=2)
+    shading_end = shading_start + pd.DateOffset(hours=24)
+
+    shading = {'start': shading_start, 'end': shading_end}
+    shading = pd.DataFrame(shading)
+    shading['color'] = ['a', 'b'] * int((len(shading)/2))
+    shading['weekday'] = shading['start'].dt.isocalendar().day
+
+    # st.dataframe(shading)
+
+    # add day shading
+    # unsupported idea: add day gridline (mark_line()) then 
+    # add time shading (22-06 (night), (day))
+    day_shading = (
+              alt.Chart(shading)
+              .mark_rect(opacity=0.1)
+              .encode(
+                x=alt.X('start:T', 
+                        scale = alt.Scale(domain=list(domain_pd))),
+                x2='end:T', 
+                fill=alt.Fill('color', 
+                              scale = alt.Scale(domain=['a', 'b'], range=['white', 'grey']),
+                              legend=None)
+            )
+    )
+
+    # weekend_shading = (
+    #           alt.Chart(shading)
+    #           .mark_rect(opacity=0.5)
+    #           .encode(
+    #             x=alt.X('start:T', 
+    #                     scale = alt.Scale(domain=list(domain_pd))),
+    #             x2='end:T', 
+    #             fill=alt.Fill('weekday',
+    #                           legend=None)
+    #         )
+    # )
+
+    st.header("Graphical overview of bookings")
+
+    st.markdown("""
+    - Default display is the current week - you can drag the chart horizontally
+    - Hover over the coloured bars to see more information on the booking
+    """)
+
+    st.altair_chart((time_graph + 
+                     day_shading).interactive(), 
+                        theme='streamlit', 
+                        use_container_width=True)
+
+with tab2:
+   
+   st.header("Book a room")
+   
    # column display from here
    col1, col2 = st.columns([1, 1])
    
    with col1: 
-      
-      def update_first():
-        st.session_state.second = st.session_state.first
 
       with st.form("check_rooms"):
         chosen_date = st.date_input("Pick a date")
