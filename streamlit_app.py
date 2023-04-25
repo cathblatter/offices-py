@@ -115,64 +115,6 @@ def create_hourly_occ(hourly_df):
              .assign(occ_rate=lambda x: x['n'] / x['cap']))
    return(hourly_occ)
 
-# ##### functions for plotting #####
-# def plot_capacity(my_data):
-#     qq = (ggplot(my_data, aes('x',
-#                              'y', 
-#                              fill = 'factor(capacity)')) 
-#                   + geom_tile(color = "white", size=3)
-#                   + geom_text(aes(label = 'roomno'))
-#                   + coord_equal()
-#                   + labs(x='Bernoullistrasse', 
-#                          y='Schönbeinstrasse')
-#                   + scale_fill_manual(values={'0': '#F1F3F5',
-#                                               '1': '#B9E4BC',
-#                                               '2': '#7BCCC4',
-#                                               '3': '#42A2CA',
-#                                               '4': '#0768AC',
-#                                               '5': '#0CA678'},
-#                                                drop=False)
-#                   + guides(fill = guide_legend(title = 'Number of places', nrow=1))
-#                   + theme(panel_grid=element_blank(), 
-#                           panel_background=element_blank(),
-#                           legend_position='top',
-#                           axis_line=element_blank(),
-#                           axis_ticks=element_blank(),
-#                           axis_text=element_blank()))
-#     return(qq)
-
-# def plot_occ_capacity_cat(my_data):
-    # qq = (ggplot(my_data, aes(x = 'time', 
-    #                           y  = 'roomno', 
-    #                           fill = 'factor(occ_rate)')) 
-    #               + geom_tile(color = "white", size=3)
-    #               + geom_text(aes(label = 'roomno'))
-    #             #   + facet_wrap('floor', nrow=1)
-    #               + scale_fill_manual(values={'overbooked': '#9C0629',
-    #                                            'booked': '#C9081F',
-    #                                            'most places booked': '#EC7309',
-    #                                            'some places booked': '#ECB309',
-    #                                            'empty': '#63B71D'},
-    #                                            drop=False)
-    #               + coord_equal()
-    #               + labs(x='Bernoullistrasse', 
-    #                      y='Schönbeinstrasse')
-    #               + guides(fill = guide_legend(title = '', nrow=1))
-    #               + theme(panel_grid=element_blank(), 
-    #                       panel_background=element_blank(),
-    #                       legend_position='top',
-    #                       axis_line=element_blank(),
-    #                       axis_ticks=element_blank(),
-    #                       axis_text=element_blank()))
-    # return(qq)
-
-# def myplot(data): 
-#    qq = (ggplot(data, aes(x = 'time',
-#                           fill = 'occ_rate'))
-#                 + geom_bar()
-#                 +facet_wrap('roomno', ncol=1))
-#    return(qq)
-
 #### Get and prepare data ####
 
 # get from database and add room_capacity information
