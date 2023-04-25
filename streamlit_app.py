@@ -59,8 +59,10 @@ time_slots = ["08:00", "09:00", "10:00", "11:00", "12:00", "13:00",
 def get_data(query): 
    rows = run_query(query)
    df = pd.DataFrame(rows.data)
-   df['date_start'] = pd.to_datetime(df["date_start"])
-   df['date_end'] = pd.to_datetime(df["date_end"])
+   df['date_start_utc'] = pd.to_datetime(df["date_start"])
+   df['date_end_utc'] = pd.to_datetime(df["date_end"])
+   df['date_start'] = df["date_start_utc"] - pd.Timedelta(hours=2)
+   df['date_end'] = df["date_end_utc"] - pd.Timedelta(hours=2)
    df['roomno_place'] = pd.Categorical(df['roomno_place'], categories=rooms_places)
    df = df.drop(['created_at'], axis=1)
    return(df)
@@ -238,31 +240,35 @@ with tab1:
                       title="Date and time of booking",
                       axis=alt.Axis(grid=True, gridWidth=2)),
               x2='date_end:T',
-              y=alt.Y('roomno_place:O', title='Offices'),
-              color=alt.Color('name', legend=None)
-              ).properties(height=300).interactive()
+              y=alt.Y('roomno_place:O', title='Offices', scale=alt.Scale(domain=rooms_places)),
+              color=alt.Color('name', legend=None),
+              tooltip=[alt.Tooltip('name', title='Name'), 
+                       alt.Tooltip('date_start', title='Date'), 
+                       alt.Tooltip('hours(date_start)', title='from'), 
+                       alt.Tooltip('hours(date_end)', title='to')]
+              ).properties(height=400).interactive()
             )
 
-      # todays reference date value for the x-axis
-      today = pd.to_datetime(dt.date.today())
-      past = today - pd.DateOffset(months=2)
-      future = today + pd.DateOffset(months=4)
-      shading_start = pd.date_range(past, future)
-      shading_end = shading_start + pd.DateOffset(hours=23)
+    #   # todays reference date value for the x-axis
+    #   today = pd.to_datetime(dt.date.today())
+    #   past = today - pd.DateOffset(months=2)
+    #   future = today + pd.DateOffset(months=4)
+    #   shading_start = pd.date_range(past, future)
+    #   shading_end = shading_start + pd.DateOffset(hours=23)
 
-      shading = {'start': shading_start, 'end': shading_end}
-      shading = pd.DataFrame(shading)
-      shading['color'] = ['lightgrey', 'white'] * int((len(shading)/2))
+    #   shading = {'start': shading_start, 'end': shading_end}
+    #   shading = pd.DataFrame(shading)
+    #   shading['color'] = ['lightgrey', 'white'] * int((len(shading)/2))
 
-      # add day shading
-      day_shading = (
-          alt.Chart(shading)
-          .mark_rect(opacity=0.1)
-          .encode(
-            x=alt.X('start:T'),
-            x2='end:T',
-            color='color')
-        )
+    #   # add day shading
+    #   day_shading = (
+    #       alt.Chart(shading)
+    #       .mark_rect(opacity=0.1)
+    #       .encode(
+    #         x=alt.X('start:T'),
+    #         x2='end:T',
+    #         color='color')
+    #     )
 
       st.altair_chart((time_graph).interactive(), 
                       theme='streamlit', 
