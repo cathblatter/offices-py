@@ -158,7 +158,8 @@ with tab1:
           # filtering the available spots to display for the room
           start = dt.datetime.combine(chosen_date, t_start).isoformat()
           end = dt.datetime.combine(chosen_date, t_end).isoformat()
-          dat = df[(df['date_start_utc'] <= start) & (df['date_end_utc'] >= end)]
+          dat = df[((df['date_start_utc'] <= end) & 
+                    (df['date_end_utc'] >= start))]
           places = dat['roomno_place'].drop_duplicates().tolist()
           av_places = set(rooms_places)
           av_places = av_places.difference(places)
