@@ -134,7 +134,7 @@ Welcome to office-bingo!
 """)
 
 # Define the inputs to display
-tab1, tab2, tab3 = st.tabs([":calendar: Book a room", "🗺️ Where am I?", "❌ Cancel booking"])
+tab1, tab2, tab3 = st.tabs([":bar_chart: Overview", ":calendar: Book a room",  "❌ Cancel booking"])
 
 with tab1:
    
@@ -151,7 +151,7 @@ with tab1:
         t_start = st.time_input('From', dt.time(8, 00), step=3600)
         t_end = st.time_input('To', dt.time(17, 00), step=3600)
 
-        check_rooms = st.form_submit_button("Check rooms")
+        check_rooms = st.form_submit_button("Check available rooms")
 
         if check_rooms: 
           
@@ -180,7 +180,7 @@ with tab1:
         # roomno_place = st.selectbox("Available places", rooms_places)
 
         # Every form must have a submit button.
-        submitted = st.form_submit_button("Submit")
+        submitted = st.form_submit_button("Book place")
              
         if submitted:
                 
@@ -200,7 +200,7 @@ with tab1:
                                                             }).execute()
             assert len(data.data) > 0
 
-            st.write("thanks for signing up!")
+            st.write("Thanks for signing up!")
                 
             # update the available database
             df = get_data('bookings')
@@ -260,22 +260,22 @@ with tab2:
 
 with tab3: 
    
-    st.header(""" :warning: Cancel your booking """)
+    st.header(""" Cancel your booking """)
 
     st.markdown("""
     If you want to cancel your booking: 
     
-    1) **Look up** your entry in the table below on the right :arrow_lower_right:  
+    1) Look up your entry in the table below on the bottom right :arrow_lower_right:  
 
     2) Submit the corresponding value from the **id** column to remove this entry from the database. 
     
-    :warning: :red[This action **cannot** be undone!]
+    :warning: :red[This action **cannot** be undone! :warning:]
 
     """)
     
     
     # column display from here
-    col1, col2 = st.columns([1,2])
+    col1, col2 = st.columns([1,3])
    
     with col1: 
        
@@ -294,6 +294,8 @@ with tab3:
             
             # update the available database
             df = get_data('bookings')
+
+            st.write("Your booking was cancelled.")
 
     with col2:
        
