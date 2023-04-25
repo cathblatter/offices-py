@@ -115,64 +115,6 @@ def create_hourly_occ(hourly_df):
              .assign(occ_rate=lambda x: x['n'] / x['cap']))
    return(hourly_occ)
 
-# ##### functions for plotting #####
-# def plot_capacity(my_data):
-#     qq = (ggplot(my_data, aes('x',
-#                              'y', 
-#                              fill = 'factor(capacity)')) 
-#                   + geom_tile(color = "white", size=3)
-#                   + geom_text(aes(label = 'roomno'))
-#                   + coord_equal()
-#                   + labs(x='Bernoullistrasse', 
-#                          y='Schönbeinstrasse')
-#                   + scale_fill_manual(values={'0': '#F1F3F5',
-#                                               '1': '#B9E4BC',
-#                                               '2': '#7BCCC4',
-#                                               '3': '#42A2CA',
-#                                               '4': '#0768AC',
-#                                               '5': '#0CA678'},
-#                                                drop=False)
-#                   + guides(fill = guide_legend(title = 'Number of places', nrow=1))
-#                   + theme(panel_grid=element_blank(), 
-#                           panel_background=element_blank(),
-#                           legend_position='top',
-#                           axis_line=element_blank(),
-#                           axis_ticks=element_blank(),
-#                           axis_text=element_blank()))
-#     return(qq)
-
-# def plot_occ_capacity_cat(my_data):
-    # qq = (ggplot(my_data, aes(x = 'time', 
-    #                           y  = 'roomno', 
-    #                           fill = 'factor(occ_rate)')) 
-    #               + geom_tile(color = "white", size=3)
-    #               + geom_text(aes(label = 'roomno'))
-    #             #   + facet_wrap('floor', nrow=1)
-    #               + scale_fill_manual(values={'overbooked': '#9C0629',
-    #                                            'booked': '#C9081F',
-    #                                            'most places booked': '#EC7309',
-    #                                            'some places booked': '#ECB309',
-    #                                            'empty': '#63B71D'},
-    #                                            drop=False)
-    #               + coord_equal()
-    #               + labs(x='Bernoullistrasse', 
-    #                      y='Schönbeinstrasse')
-    #               + guides(fill = guide_legend(title = '', nrow=1))
-    #               + theme(panel_grid=element_blank(), 
-    #                       panel_background=element_blank(),
-    #                       legend_position='top',
-    #                       axis_line=element_blank(),
-    #                       axis_ticks=element_blank(),
-    #                       axis_text=element_blank()))
-    # return(qq)
-
-# def myplot(data): 
-#    qq = (ggplot(data, aes(x = 'time',
-#                           fill = 'occ_rate'))
-#                 + geom_bar()
-#                 +facet_wrap('roomno', ncol=1))
-#    return(qq)
-
 #### Get and prepare data ####
 
 # get from database and add room_capacity information
@@ -192,31 +134,119 @@ Welcome to office-bingo!
 """)
 
 # Define the inputs to display
-tab1, tab2, tab3 = st.tabs([":calendar: Book a room", "🗺️ Where am I?", "❌ Cancel booking"])
+tab1, tab2, tab3 = st.tabs([":bar_chart: Overview", ":calendar: Book a room",  "❌ Cancel booking"])
 
 with tab1:
+   
+    # time graph
+    time_graph = (
+                alt.Chart(df)
+                .mark_bar()
+                .encode(
+                x=alt.X('date_start:T', 
+                        title="Date and time of booking",
+                        axis=alt.Axis(grid=True, gridWidth=2)),
+                x2='date_end:T',
+                y=alt.Y('roomno_place:O', 
+                        title='Offices', 
+                        scale=alt.Scale(domain=rooms_places)),
+                # color=alt.Color('name', legend=None),
+                tooltip=[alt.Tooltip('name', title='Name'), 
+                        alt.Tooltip('date_start', title='Date'), 
+                        alt.Tooltip('hours(date_start)', title='from'), 
+                        alt.Tooltip('hours(date_end)', title='to')]
+                ).properties(height=400).interactive()
+                )
+
+    # today and other reference date value for the axis, 
+    # the axis domains, the shading etc
+    today = pd.to_datetime(dt.date.today())
+
+    # for domain_pd to see only 1 week from today
+    week = today + pd.DateOffset(weeks=1)
+    domain_pd = pd.to_datetime([today, week]).astype(int) / 10 ** 6
+
+    # shading one year front and back for today
+    past = today - pd.DateOffset(years=1)
+    future = today + pd.DateOffset(years=1)
+
+    # create a dataframe with the information
+    shading_start = pd.date_range(past, future)
+
+    # the two hours offset are for matching the weird TZ difference
+    shading_start = shading_start - pd.DateOffset(hours=2)
+    shading_end = shading_start + pd.DateOffset(hours=24)
+
+    shading = {'start': shading_start, 'end': shading_end}
+    shading = pd.DataFrame(shading)
+    shading['color'] = ['a', 'b'] * int((len(shading)/2))
+    shading['weekday'] = shading['start'].dt.isocalendar().day
+
+    # st.dataframe(shading)
+
+    # add day shading
+    # unsupported idea: add day gridline (mark_line()) then 
+    # add time shading (22-06 (night), (day))
+    day_shading = (
+              alt.Chart(shading)
+              .mark_rect(opacity=0.1)
+              .encode(
+                x=alt.X('start:T', 
+                        scale = alt.Scale(domain=list(domain_pd))),
+                x2='end:T', 
+                fill=alt.Fill('color', 
+                              scale = alt.Scale(domain=['a', 'b'], range=['white', 'grey']),
+                              legend=None)
+            )
+    )
+
+    # weekend_shading = (
+    #           alt.Chart(shading)
+    #           .mark_rect(opacity=0.5)
+    #           .encode(
+    #             x=alt.X('start:T', 
+    #                     scale = alt.Scale(domain=list(domain_pd))),
+    #             x2='end:T', 
+    #             fill=alt.Fill('weekday',
+    #                           legend=None)
+    #         )
+    # )
+
+    st.header("Graphical overview of bookings")
+
+    st.markdown("""
+    - Default display is the current week - you can drag the chart horizontally
+    - Hover over the coloured bars to see more information on the booking
+    """)
+
+    st.altair_chart((time_graph + 
+                     day_shading).interactive(), 
+                        theme='streamlit', 
+                        use_container_width=True)
+
+with tab2:
+   
+   st.header("Book a room")
    
    # column display from here
    col1, col2 = st.columns([1, 1])
    
    with col1: 
-      
-      def update_first():
-        st.session_state.second = st.session_state.first
 
       with st.form("check_rooms"):
         chosen_date = st.date_input("Pick a date")
         t_start = st.time_input('From', dt.time(8, 00), step=3600)
         t_end = st.time_input('To', dt.time(17, 00), step=3600)
 
-        check_rooms = st.form_submit_button("Check rooms")
+        check_rooms = st.form_submit_button("Check available rooms")
 
         if check_rooms: 
           
           # filtering the available spots to display for the room
           start = dt.datetime.combine(chosen_date, t_start).isoformat()
           end = dt.datetime.combine(chosen_date, t_end).isoformat()
-          dat = df[(df['date_start_utc'] <= start) & (df['date_end_utc'] >= end)]
+          dat = df[((df['date_start_utc'] <= end) & 
+                    (df['date_end_utc'] >= start))]
           places = dat['roomno_place'].drop_duplicates().tolist()
           av_places = set(rooms_places)
           av_places = av_places.difference(places)
@@ -228,16 +258,12 @@ with tab1:
    with col2: 
 
       with st.form("book_rooms"):
-
+    
         my_name = st.text_input("Name")
         roomno_place = st.text_input("Enter your place here:")
-       
-
-        # roomno_place = st.selectbox("Available places", av_places)
-        # roomno_place = st.selectbox("Available places", rooms_places)
 
         # Every form must have a submit button.
-        submitted = st.form_submit_button("Submit")
+        submitted = st.form_submit_button("Book place")
              
         if submitted:
                 
@@ -257,82 +283,29 @@ with tab1:
                                                             }).execute()
             assert len(data.data) > 0
 
-            st.write("thanks for signing up!")
+            st.write("Thanks for signing up!")
                 
             # update the available database
             df = get_data('bookings')
 
-
-# text outside of the cols - does not get updated
-
-time_graph = (
-            alt.Chart(df)
-            .mark_bar()
-            .encode(
-              x=alt.X('date_start:T', 
-                      title="Date and time of booking",
-                      axis=alt.Axis(grid=True, gridWidth=2)),
-              x2='date_end:T',
-              y=alt.Y('roomno_place:O', title='Offices', scale=alt.Scale(domain=rooms_places)),
-              color=alt.Color('name', legend=None),
-              tooltip=[alt.Tooltip('name', title='Name'), 
-                       alt.Tooltip('date_start', title='Date'), 
-                       alt.Tooltip('hours(date_start)', title='from'), 
-                       alt.Tooltip('hours(date_end)', title='to')]
-              ).properties(height=400).interactive()
-            )
-
-    #   # todays reference date value for the x-axis
-    #   today = pd.to_datetime(dt.date.today())
-    #   past = today - pd.DateOffset(months=2)
-    #   future = today + pd.DateOffset(months=4)
-    #   shading_start = pd.date_range(past, future)
-    #   shading_end = shading_start + pd.DateOffset(hours=23)
-
-    #   shading = {'start': shading_start, 'end': shading_end}
-    #   shading = pd.DataFrame(shading)
-    #   shading['color'] = ['lightgrey', 'white'] * int((len(shading)/2))
-
-    #   # add day shading
-    #   day_shading = (
-    #       alt.Chart(shading)
-    #       .mark_rect(opacity=0.1)
-    #       .encode(
-    #         x=alt.X('start:T'),
-    #         x2='end:T',
-    #         color='color')
-    #     )
-
-st.markdown("**Graphical overview of bookings**")
-
-st.altair_chart((time_graph).interactive(), 
-                      theme='streamlit', 
-                      use_container_width=True)
-
-
-
-with tab2: 
-   
-    st.header(" 🚧 🚜 🛠️ 🚧")
-
 with tab3: 
    
-    st.header(""" :warning: Cancel your booking """)
+    st.header(""" Cancel your booking """)
 
     st.markdown("""
     If you want to cancel your booking: 
     
-    1) **Look up** your entry in the table below on the right :arrow_lower_right:  
+    1) Look up your entry in the table below on the bottom right :arrow_lower_right:  
 
     2) Submit the corresponding value from the **id** column to remove this entry from the database. 
     
-    :warning: :red[This action **cannot** be undone!]
+    :warning: :red[This action **cannot** be undone! :warning:]
 
     """)
     
     
     # column display from here
-    col1, col2 = st.columns([1,2])
+    col1, col2 = st.columns([1,3])
    
     with col1: 
        
@@ -351,6 +324,8 @@ with tab3:
             
             # update the available database
             df = get_data('bookings')
+
+            st.write("Your booking was cancelled.")
 
     with col2:
        
