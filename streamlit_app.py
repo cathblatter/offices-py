@@ -189,7 +189,7 @@ Welcome to office-bingo!
 """)
 
 # Define the inputs to display
-tab1, tab2 = st.tabs({"Bookings", "Overview"})
+tab1, tab2, tab3 = st.tabs([":calendar: Bookings", "🗺️ Where am I?", "❌ Cancel booking"])
 
 with tab1:
    
@@ -289,6 +289,46 @@ with tab1:
 
 with tab2: 
    
-    st.write("Mirror database")
+    st.header(" 🚧 🚜 🛠️ 🚧")
 
-    st.dataframe(df)
+with tab3: 
+   
+    st.header(""" :warning: Cancel your booking! """)
+
+    st.markdown("""
+    If you want to cancel your booking: 
+    
+    1) **Look up** your entry in the table below on the right :arrow_lower_right:  
+
+    2) Submit the corresponding value from the **id** column to remove this entry from the database. 
+    
+    :warning: :red[This action **cannot** be undone!]
+
+    """)
+    
+    
+    # column display from here
+    col1, col2 = st.columns([1,2])
+   
+    with col1: 
+       
+       with st.form("delete_rooms"):
+          
+          del_id = st.text_input("ID to delete")
+
+          # Every form must have a submit button.
+          del_submitted = st.form_submit_button("Delete record")
+
+          if del_submitted:
+            
+            data = supabase.table("bookings").delete().eq("id", del_id).execute()
+            
+            assert len(data.data) > 0
+            
+            # update the available database
+            df = get_data('bookings')
+
+    with col2:
+       
+       st.dataframe(df)
+
