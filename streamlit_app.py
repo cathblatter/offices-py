@@ -283,6 +283,16 @@ with tab2:
                                                             }).execute()
             assert len(data.data) > 0
 
+            # also write data into shadow-db
+            data2 = supabase.table("bookings_shadow").insert({"name":my_name,
+                                                            "date_start":date_start,
+                                                            "date_end":date_end,
+                                                            "roomno_place": roomno_place,
+                                                            "roomno": roomno,
+                                                            "place": place,
+                                                            }).execute()
+            assert len(data2.data) > 0
+
             st.write("Thanks for signing up!")
                 
             # update the available database
