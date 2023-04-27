@@ -53,8 +53,8 @@ room_coords_ug['capacity'] = pd.Categorical(room_coords_ug['capacity'],
                                             categories=['0','1','2','3','4','5'])
 
 # Define the available rooms, places and time slots
-room_cap = pd.DataFrame({'roomno': ["U03", "115", "117"],
-                         'cap': [5, 3, 1]})
+room_cap = pd.DataFrame({'roomno': ["U03", "115", "117", "U08", "201"],
+                         'cap': [5, 3, 1, 1, 1]})
 
 #### actual database #####
 
@@ -63,6 +63,11 @@ room_cap = pd.DataFrame({'roomno': ["U03", "115", "117"],
 rooms_places = ["U03_1", "U03_2", "U03_3", "U03_4", "U03_5", 
                 "115_1", "115_2", "115_3", 
                 "117_1"]
+
+zooms_places = ["U08_1",  "201_L"]
+
+all_places = rooms_places+zooms_places
+
 time_slots = ["08:00", "09:00", "10:00", "11:00", "12:00", "13:00", 
               "14:00", "15:00", "16:00", "17:00", "18:00"]
 
@@ -76,7 +81,7 @@ def get_data(query):
    df['date_end_utc'] = pd.to_datetime(df["date_end"])
    df['date_start'] = df["date_start_utc"] - pd.Timedelta(hours=2)
    df['date_end'] = df["date_end_utc"] - pd.Timedelta(hours=2)
-   df['roomno_place'] = pd.Categorical(df['roomno_place'], categories=rooms_places)
+   df['roomno_place'] = pd.Categorical(df['roomno_place'], categories=all_places)
    df = df.drop(['created_at'], axis=1)
    return(df)
 
@@ -134,7 +139,7 @@ Welcome to office-bingo!
 """)
 
 # Define the inputs to display
-tab1, tab2, tab3 = st.tabs([":bar_chart: Overview", ":calendar: Book a room",  "❌ Cancel booking"])
+tab1, tab2, tab3, tab4 = st.tabs([":bar_chart: Overview", ":calendar: Book a work place ", ":calendar: Book zoom room ", "❌ Cancel booking"])
 
 with tab1:
    
@@ -149,7 +154,7 @@ with tab1:
                 x2='date_end:T',
                 y=alt.Y('roomno_place:O', 
                         title='Office and places', 
-                        scale=alt.Scale(domain=rooms_places)),
+                        scale=alt.Scale(domain=all_places)),
                 # color=alt.Color('name', legend=None),
                 tooltip=[alt.Tooltip('name', title='Name'), 
                         alt.Tooltip('date_start', title='Date'), 
@@ -226,7 +231,8 @@ with tab1:
 
 with tab2:
    
-   st.header("Book a room")
+   st.header("Book a work place 👨‍💻 ")
+   st.markdown("*You need a place to work for a fixed number of hours or a whole day while being at the INS, mostly doing quiet work*")
    
    # column display from here
    col1, col2 = st.columns([1, 1])
@@ -245,8 +251,9 @@ with tab2:
           # filtering the available spots to display for the room
           start = dt.datetime.combine(chosen_date, t_start).isoformat()
           end = dt.datetime.combine(chosen_date, t_end).isoformat()
-          dat = df[((df['date_start_utc'] <= end) & 
-                    (df['date_end_utc'] >= start))]
+          dat = df[df['roomno_place'].isin(rooms_places)]
+          dat = dat[((dat['date_start_utc'] <= end) & 
+                    (dat['date_end_utc'] >= start))]
           places = dat['roomno_place'].drop_duplicates().tolist()
           av_places = set(rooms_places)
           av_places = av_places.difference(places)
@@ -299,6 +306,88 @@ with tab2:
             df = get_data('bookings')
 
 with tab3: 
+   
+   st.header("Book a zoom room 🎥 ")
+   
+   st.markdown("*You need a room for a reduced number of time to zoom (while not disturbing your office-colleagues).*")
+   
+   st.markdown("Please don't book these rooms for whole days (if not in zooms) - thanks!")
+
+   st.write("🚧 under construction 🚧")
+
+# column display from here
+   col1, col2 = st.columns([1, 1])
+   
+   with col1: 
+
+      with st.form("check_zoom_rooms"):
+        chosen_date = st.date_input("Pick a date")
+        t_start = st.time_input('From', dt.time(9, 00), step=3600)
+        t_end = st.time_input('To', dt.time(10, 00), step=3600)
+
+        check_rooms = st.form_submit_button("Check available rooms")
+
+        if check_rooms: 
+          
+          # filtering the available spots to display for the room
+          start = dt.datetime.combine(chosen_date, t_start).isoformat()
+          end = dt.datetime.combine(chosen_date, t_end).isoformat()
+          dat = df[df['roomno_place'].isin(zooms_places)]
+          dat = dat[((dat['date_start_utc'] <= end) & 
+                    (dat['date_end_utc'] >= start))]
+          places = dat['roomno_place'].drop_duplicates().tolist()
+          av_zoom_places = set(zooms_places)
+          av_zoom_places = av_zoom_places.difference(places)
+          av_zoom_places = list(zooms_places)
+          av_zoom_places.sort()
+
+          st.write("These places are available - select one with 'copy to clipboard':", av_zoom_places)
+
+   with col2: 
+
+      with st.form("book_zooms"):
+    
+        my_name = st.text_input("Name")
+        roomno_place = st.text_input("Paste/enter your chosen place here:")
+
+        # Every form must have a submit button.
+        submitted = st.form_submit_button("Book place")
+             
+        if submitted:
+                
+            # modify and wrap data for storing in database
+            roomno_place = roomno_place.replace('"', '')
+            roomno = roomno_place.split("_")[0]
+            place = roomno_place.split("_")[1]
+            date_start = json.dumps(dt.datetime.combine(chosen_date, t_start).isoformat())
+            date_end = json.dumps(dt.datetime.combine(chosen_date, t_end).isoformat())
+
+            data = supabase.table("bookings").insert({"name":my_name,
+                                                            "date_start":date_start,
+                                                            "date_end":date_end,
+                                                            "roomno_place": roomno_place,
+                                                            "roomno": roomno,
+                                                            "place": place,
+                                                            }).execute()
+            assert len(data.data) > 0
+
+            # also write data into shadow-db
+            data2 = supabase.table("bookings_shadow").insert({"name":my_name,
+                                                            "date_start":date_start,
+                                                            "date_end":date_end,
+                                                            "roomno_place": roomno_place,
+                                                            "roomno": roomno,
+                                                            "place": place,
+                                                            }).execute()
+            assert len(data2.data) > 0
+
+            st.write("Thanks for signing up!")
+                
+            # update the available database
+            df = get_data('bookings')
+
+
+with tab4: 
    
     st.header(""" Cancel your booking """)
 
