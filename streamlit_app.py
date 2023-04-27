@@ -138,6 +138,8 @@ st.title("""
 Welcome to office-bingo!
 """)
 
+st.markdown("🛠️: this is a pre-release for testing purpose")
+
 # Define the inputs to display
 tab1, tab2, tab3, tab4 = st.tabs([":bar_chart: Overview", ":calendar: Book a work place ", ":calendar: Book zoom room ", "❌ Cancel booking"])
 
@@ -232,7 +234,7 @@ with tab1:
 with tab2:
    
    st.header("Book a work place 👨‍💻 ")
-   st.markdown("*You need a place to work for a fixed number of hours or a whole day while being at the INS, mostly doing quiet work*")
+   st.markdown("*You need a place to work for a fixed number of hours or a whole day while being at the INS, mostly doing quiet work.*")
    
    # column display from here
    col1, col2 = st.columns([1, 1])
@@ -311,9 +313,9 @@ with tab3:
    
    st.markdown("*You need a room for a reduced number of time to zoom (while not disturbing your office-colleagues).*")
    
-   st.markdown("Please don't book these rooms for whole days (if not in zooms) - thanks!")
+   # st.markdown("+Please don't book these rooms for whole days (if not in zooms) - thanks!")
 
-   st.write("🚧 under construction 🚧")
+   # st.write("🚧 under construction 🚧")
 
 # column display from here
    col1, col2 = st.columns([1, 1])
