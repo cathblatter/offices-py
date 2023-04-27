@@ -138,7 +138,7 @@ st.title("""
 Welcome to office-bingo!
 """)
 
-st.markdown("🛠️: this is a pre-release for testing purpose")
+st.markdown("🛠️ :orange[this is a pre-release for testing - no guarantee given]")
 
 # Define the inputs to display
 tab1, tab2, tab3, tab4 = st.tabs([":bar_chart: Overview", ":calendar: Book a work place ", ":calendar: Book zoom room ", "❌ Cancel booking"])
