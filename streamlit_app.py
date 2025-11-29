@@ -53,16 +53,39 @@ room_coords_ug['capacity'] = pd.Categorical(room_coords_ug['capacity'],
                                             categories=['0','1','2','3','4','5'])
 
 # Define the available rooms, places and time slots
-room_cap = pd.DataFrame({'roomno': ["U03", "115", "117", "U08", "201"],
-                         'cap': [5, 3, 1, 1, 1]})
+room_cap = pd.DataFrame({'roomno': ["U03", 
+                                    "101", "105",
+                                    "106", "107",
+                                    "108", "109",
+                                    "110", "113",
+                                    "115", "117", 
+                                    "118",
+                                    "U08", "201"],
+                         'cap': [5, 
+                                 4, 2, 
+                                 2, 2, 
+                                 2, 2, 
+                                 1, 3,
+                                 3, 1,
+                                 1, 
+                                 1, 1]})
 
 #### actual database #####
 
 
 #### UI inputs #####
 rooms_places = ["U03_1", "U03_2", "U03_3", "U03_4", "U03_5", 
+                "101_1", "101_2", "101_3", "101_4",
+                "105_1", "105_2",
+                "106_1", "106_2",
+                "107_1", "107_2",
+                "108_1", "108_2",
+                "109_1", "109_2",
+                "110_1",
+                "113_1", "113_2", "113_3",
                 "115_1", "115_2", "115_3", 
-                "117_1"]
+                "117_1",
+                "118_1"]
 
 zooms_places = ["U08_1",  "201_L"]
 
@@ -162,7 +185,8 @@ with tab1:
                         alt.Tooltip('date_start', title='Date'), 
                         alt.Tooltip('hours(date_start)', title='from'), 
                         alt.Tooltip('hours(date_end)', title='to')]
-                ).properties(height=400).interactive()
+                ).properties(
+                ).interactive()
                 )
 
     # today and other reference date value for the axis, 
@@ -186,10 +210,12 @@ with tab1:
 
     shading = {'start': shading_start, 'end': shading_end}
     shading = pd.DataFrame(shading)
-    shading['color'] = ['a', 'b'] * int((len(shading)/2))
     shading['weekday'] = shading['start'].dt.isocalendar().day
+    shading['wknd'] = shading["weekday"].isin([5,6])
+    shading['color'] = [False, True] * int((len(shading)/2))
+    shading['wkdy_color'] = shading['weekday'].isin([7, 2, 4])
 
-    # st.dataframe(shading)
+   #  st.dataframe(shading)
 
     # add day shading
     # unsupported idea: add day gridline (mark_line()) then 
@@ -202,7 +228,8 @@ with tab1:
                         scale = alt.Scale(domain=list(domain_pd))),
                 x2='end:T', 
                 fill=alt.Fill('color', 
-                              scale = alt.Scale(domain=['a', 'b'], range=['white', 'grey']),
+                              scale = alt.Scale(domain=[False,True], 
+                                                range=['white', 'grey']),
                               legend=None)
             )
     )
